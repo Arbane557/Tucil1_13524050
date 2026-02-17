@@ -1,0 +1,44 @@
+# Maven / Java build output
+/target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Logs
+*.log
+
+# Maven wrapper cache (keep wrapper files if you add them later)
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE: IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# IDE: VS Code
+.vscode/
+
+# IDE: Eclipse
+.project
+.classpath
+.settings/
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*~
