@@ -1,9 +1,7 @@
 
 import java.io.File;
 import java.util.List;
-
 import javax.imageio.ImageIO;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
@@ -40,11 +38,13 @@ public class App extends Application {
     private VBox boardCard = new VBox();
     private Label iterationsLabel = new Label("0");
     private Label timeLabel = new Label("0 ms");
+    private Label statusLabel = new Label("");
     private Button faceButton = new Button(":)");
     private ChoiceBox<Solver.Mode> modeChoice = new ChoiceBox<>();
     private double cellSize = 30.0;
-    private String panelStyle= "-fx-background-color: #C0C0C0; -fx-border-color: #7B7B7B #FFF #FFF #7B7B7B; -fx-border-width: 2;";
-    private String buttonStyle= "-fx-background-color: #C0C0C0; -fx-border-color: #FFF #7B7B7B #7B7B7B #FFF; -fx-border-width: 2; -fx-font-weight: bold;";
+    private Thread solverThread = null;
+    private String panelStyle = "-fx-background-color: #C0C0C0; -fx-border-color: #7B7B7B #FFF #FFF #7B7B7B; -fx-border-width: 2;";
+    private String buttonStyle = "-fx-background-color: #C0C0C0; -fx-border-color: #FFF #7B7B7B #7B7B7B #FFF; -fx-border-width: 2; -fx-font-weight: bold;";
 
     @Override
     public void start(Stage stage) {
@@ -66,23 +66,27 @@ public class App extends Application {
         Button loadButton = new Button("LOAD");
         Button solveButton = new Button("SOLVE");
         Button saveButton = new Button("SAVE PNG");
+        Button saveTxt = new Button("SAVE TXT");
 
         loadButton.setStyle(buttonStyle);
         solveButton.setStyle(buttonStyle);
         saveButton.setStyle(buttonStyle);
         faceButton.setStyle(buttonStyle);
+        saveTxt.setStyle(buttonStyle);
 
-        modeChoice.getItems().addAll(Solver.Mode.PURE, Solver.Mode.ROW_CONS);
-        modeChoice.setValue(Solver.Mode.ROW_CONS);
+        modeChoice.getItems().addAll(Solver.Mode.PURE, Solver.Mode.CONSTRAINTS);
+        modeChoice.setValue(Solver.Mode.CONSTRAINTS);
 
-        HBox top = new HBox(8, loadButton, solveButton, saveButton, modeChoice);
+        HBox top = new HBox(8, loadButton, solveButton, saveButton, saveTxt, modeChoice);
         top.setAlignment(Pos.CENTER);
         top.setPadding(new Insets(8));
         top.setStyle(panelStyle);
 
         Label itText = new Label("Iter:");
         Label msText = new Label("Time:");
-        HBox bottom = new HBox(10, faceButton, itText, iterationsLabel, msText, timeLabel);
+        statusLabel.setTextFill(Color.web("#CC0000"));
+        statusLabel.setStyle("-fx-font-size: 11;");
+        HBox bottom = new HBox(10, faceButton, itText, iterationsLabel, msText, timeLabel, statusLabel);
         bottom.setAlignment(Pos.CENTER_LEFT);
         bottom.setPadding(new Insets(8));
         bottom.setStyle(panelStyle);
@@ -94,10 +98,21 @@ public class App extends Application {
         loadButton.setOnAction(e -> loadFile(stage));
         solveButton.setOnAction(e -> runSolver(loadButton, solveButton, saveButton));
         saveButton.setOnAction(e -> saveSnapshot(stage));
+        saveTxt.setOnAction(e -> saveText(stage));
         faceButton.setOnAction(e -> {
+            if (solverThread != null && solverThread.isAlive()) {
+                solver.cancel();
+                solverThread.interrupt();
+            }
             if (cfg != null) {
                 clearQueens();
+                iterationsLabel.setText("0");
+                timeLabel.setText("0 ms");
                 faceButton.setText(":)");
+                loadButton.setDisable(false);
+                solveButton.setDisable(false);
+                saveButton.setDisable(false);
+                saveTxt.setDisable(false);
             }
         });
 
@@ -118,11 +133,6 @@ public class App extends Application {
 
         try {
             Config next = reader.readConfig(file.getAbsolutePath());
-            if (next == null) {
-                faceButton.setText("X(");
-                return;
-            }
-
             cfg = next;
             cellSize = computeCellSize(cfg.n);
             drawBoard();
@@ -130,8 +140,13 @@ public class App extends Application {
             iterationsLabel.setText("0");
             timeLabel.setText("0 ms");
             faceButton.setText(":)");
+            statusLabel.setText("");
+        } catch (IllegalArgumentException ex) {
+            faceButton.setText("X(");
+            statusLabel.setText(ex.getMessage());
         } catch (Exception ex) {
             faceButton.setText("X(");
+            statusLabel.setText("Failed to read file");
         }
     }
 
@@ -149,10 +164,11 @@ public class App extends Application {
         clearQueens();
         iterationsLabel.setText("0");
         timeLabel.setText("0 ms");
+        statusLabel.setText("");
 
         Solver.Mode mode = modeChoice.getValue();
 
-        Thread worker = new Thread(() -> {
+        solverThread = new Thread(() -> {
             boolean solved = solver.solve(cfg, mode, (it, cand) -> {
                 Platform.runLater(() -> {
                     showQueens(cand);
@@ -164,12 +180,14 @@ public class App extends Application {
                 if (solved) {
                     showQueens(solver.getPlacedQueens());
                     faceButton.setText(":)");
+                    statusLabel.setText("");
                 } else {
                     faceButton.setText("X(");
+                    statusLabel.setText("No solution found");
                 }
 
-                iterationsLabel.setText(Long.toString(solver.getIterationsChecked()));
-                timeLabel.setText(Long.toString(solver.getElapsedMs()) + " ms");
+                iterationsLabel.setText(Long.toString(solver.getItteration()));
+                timeLabel.setText(Long.toString(solver.getTime()) + " ms");
 
                 loadButton.setDisable(false);
                 solveButton.setDisable(false);
@@ -177,8 +195,8 @@ public class App extends Application {
             });
         });
 
-        worker.setDaemon(true);
-        worker.start();
+        solverThread.setDaemon(true);
+        solverThread.start();
     }
 
     private void drawBoard() {
@@ -200,11 +218,8 @@ public class App extends Application {
     }
 
     private Color colorForRegion(int idx) {
-        Color[] palette = new Color[]{
-            Color.web("#BDBDBD"), Color.web("#C8C8FF"), Color.web("#C8FFC8"), Color.web("#FFC8C8"),
-            Color.web("#FFF0C8"), Color.web("#C8FFF0"), Color.web("#F0C8FF"), Color.web("#D8D8D8")
-        };
-        return palette[Math.floorMod(idx, palette.length)];
+        double hue = (idx * 40) % 360;
+        return Color.hsb(hue, 0.35, 0.85);
     }
 
     private void clearQueens() {
@@ -255,6 +270,38 @@ public class App extends Application {
         try {
             WritableImage img = boardCard.snapshot(new SnapshotParameters(), null);
             ImageIO.write(SwingFXUtils.fromFXImage(img, null), "png", out);
+        } catch (Exception ex) {
+            faceButton.setText("X(");
+        }
+    }
+
+    private void saveText(Stage stage) {
+        if (cfg == null) {
+            return;
+        }
+
+        boolean hasQueen[][] = new boolean[cfg.n][cfg.n];
+        for (Cell q : solver.getPlacedQueens()) {
+            hasQueen[q.x][q.y] = true;
+        }
+
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Save Solution TXT");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Text File", "*.txt"));
+        chooser.setInitialFileName("solution.txt");
+
+        File out = chooser.showSaveDialog(stage);
+        if (out == null) {
+            return;
+        }
+
+        try (java.io.PrintWriter pw = new java.io.PrintWriter(out)) {
+            for (int r = 0; r < cfg.n; r++) {
+                for (int c = 0; c < cfg.n; c++) {
+                    pw.print(hasQueen[r][c] ? '$' : cfg.regionCharGrid[r][c]);
+                }
+                pw.println();
+            }
         } catch (Exception ex) {
             faceButton.setText("X(");
         }
