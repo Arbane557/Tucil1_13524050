@@ -81,6 +81,7 @@ Menghasilkan semua kombinasi $\binom{n^2}{n}$ penempatan queen, lalu mengecek se
 Untuk setiap region, menempatkan tepat satu queen di salah satu sel region tersebut, lalu memvalidasi constraint secara inkremental. Pencarian di-prune saat terjadi konflik sehingga jauh lebih cepat.
 
 ## Author
+![Uploading image.png…]()
 
 - **Nama**: Raysha Erviandika Putra
 - **NIM**: 13524050
