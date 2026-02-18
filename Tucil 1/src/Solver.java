@@ -7,45 +7,42 @@ public class Solver {
 
     public enum Mode {
         PURE,
-        ROW_CONS
+        CONSTRAINTS
     }
 
-    private List<Cell> placedQueens = new ArrayList<>();
+    public List<Cell> placedQueens = new ArrayList<>();
     private long iterationsChecked = 0;
     private long elapsedMs = 0;
+    public long uiUpdateRate = 1000;
+    private volatile boolean cancelled = false;
 
-    public long uiUpdateRate = 200_000;
+    public void cancel() {
+        cancelled = true;
+    }
 
     public List<Cell> getPlacedQueens() {
         return new ArrayList<>(placedQueens);
     }
 
-    public long getIterationsChecked() {
+    public long getItteration() {
         return iterationsChecked;
     }
 
-    public long getElapsedMs() {
+    public long getTime() {
         return elapsedMs;
-    }
-
-    public boolean solve(Config cfg, Mode mode) {
-        return solve(cfg, mode, null);
     }
 
     public boolean solve(Config cfg, Mode mode, BiConsumer<Long, List<Cell>> onIteration) {
         placedQueens.clear();
         iterationsChecked = 0;
         elapsedMs = 0;
-
-        if (!basicCheck(cfg)) {
-            return false;
-        }
+        cancelled = false;
 
         long start = System.currentTimeMillis();
         boolean solved;
 
-        if (mode == Mode.ROW_CONS) {
-            solved = solveRowCons(cfg.n, cfg.regionMap, onIteration);
+        if (mode == Mode.CONSTRAINTS) {
+            solved = solveConstraints(cfg.n, cfg.regionMap, onIteration);
         } else {
             solved = solvePure(cfg.n, cfg.regionMap, onIteration);
         }
@@ -54,39 +51,18 @@ public class Solver {
         return solved;
     }
 
-    private boolean basicCheck(Config cfg) {
-        if (cfg == null) {
-            return false;
-        }
-
-        int n = cfg.n;
-        if (n <= 0) {
-            return false;
-        }
-
-        if (cfg.regions == null || cfg.regions.size() != n) {
-            return false;
-        }
-
-        if (cfg.regionMap == null || cfg.regionMap.length != n) {
-            return false;
-        }
-        for (int r = 0; r < n; r++) {
-            if (cfg.regionMap[r] == null || cfg.regionMap[r].length != n) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     private boolean solvePure(int n, int[][] regionMap, BiConsumer<Long, List<Cell>> onIteration) {
         int m = n * n;
+
         int[] comb = new int[n];
         for (int i = 0; i < n; i++) {
             comb[i] = i;
         }
 
         while (true) {
+            if (cancelled) {
+                return false;
+            }
             iterationsChecked++;
 
             List<Cell> candidate = new ArrayList<>(n);
@@ -121,53 +97,69 @@ public class Solver {
         return false;
     }
 
-private boolean solveRowCons(int n, int[][] regionMap, BiConsumer<Long, List<Cell>> onIteration) {
-    int[] colsPick = new int[n];
-
-    for (int i = 0; i < n; i++) {
-        colsPick[i] = 0;
-    }
-
-    while (true) {
-
-        iterationsChecked++;
-
-        List<Cell> candidate = new ArrayList<>(n);
-        for (int r = 0; r < n; r++) {
-            candidate.add(new Cell(r, colsPick[r]));
+    private boolean solveConstraints(int n, int[][] regionMap, BiConsumer<Long, List<Cell>> onIteration) {
+        int[] perm = new int[n];
+        for (int i = 0; i < n; i++) {
+            perm[i] = i;
         }
 
-        if (queenCheck(candidate, n, regionMap)) {
-            placedQueens = candidate;
-            return true;
-        }
+        while (true) {
+            if (cancelled) {
+                return false;
+            }
+            iterationsChecked++;
 
-        if (onIteration != null && iterationsChecked % uiUpdateRate == 0) {
-            onIteration.accept(iterationsChecked, candidate);
-        }
-
-        int i = n - 1;
-
-        while (i >= 0) {
-
-            colsPick[i]++;
-
-            if (colsPick[i] < n) {
-                break;
+            List<Cell> candidate = new ArrayList<>(n);
+            for (int r = 0; r < n; r++) {
+                candidate.add(new Cell(r, perm[r]));
             }
 
-            colsPick[i] = 0;
-            i--;
+            if (queenCheck(candidate, n, regionMap)) {
+                placedQueens = candidate;
+                return true;
+            }
+
+            if (onIteration != null && iterationsChecked % uiUpdateRate == 0) {
+                onIteration.accept(iterationsChecked, candidate);
+            }
+
+            if (!nextCandidate(perm)) {
+                break;
+            }
         }
 
-        if (i < 0) {
-            break;
-        }
+        return false;
     }
 
-    return false;
-}
+    private boolean nextCandidate(int[] perm) {
+        int i = perm.length - 2;
+        while (i >= 0 && perm[i] >= perm[i + 1]) {
+            i--;
+        }
+        if (i < 0) {
+            return false;
+        }
 
+        int j = perm.length - 1;
+        while (perm[j] <= perm[i]) {
+            j--;
+        }
+
+        int tmp = perm[i];
+        perm[i] = perm[j];
+        perm[j] = tmp;
+
+        int l = i + 1, r = perm.length - 1;
+        while (l < r) {
+            tmp = perm[l];
+            perm[l] = perm[r];
+            perm[r] = tmp;
+            l++;
+            r--;
+        }
+
+        return true;
+    }
 
     private boolean queenCheck(List<Cell> queens, int n, int[][] regionMap) {
         if (queens == null || queens.size() != n) {
@@ -211,8 +203,10 @@ private boolean solveRowCons(int n, int[][] regionMap, BiConsumer<Long, List<Cel
                     if (dr == 0 && dc == 0) {
                         continue;
                     }
+
                     int rr = r + dr;
                     int cc = c + dc;
+
                     if (rr < 0 || rr >= n || cc < 0 || cc >= n) {
                         continue;
                     }

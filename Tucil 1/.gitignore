@@ -1,15 +1,19 @@
-# Maven / Java build output
+# Build output
 /target/
+/bin/*.jar
+/bin/*.class
 *.class
-*.jar
 *.war
 *.ear
+
+/lib/javafx-sdk-*/
+/lib/*.jar
 
 # Logs
 *.log
 
-# Maven wrapper cache (keep wrapper files if you add them later)
-.mvn/wrapper/maven-wrapper.jar
+# Maven (optional)
+.mvn/
 
 # IDE: IntelliJ
 .idea/
