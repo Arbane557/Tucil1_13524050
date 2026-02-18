@@ -1,7 +1,5 @@
 # Build output
 /target/
-/bin/*.jar
-/bin/*.class
 *.class
 *.war
 *.ear
