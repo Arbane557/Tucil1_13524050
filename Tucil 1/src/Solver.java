@@ -98,15 +98,20 @@ public class Solver {
     }
 
     private boolean solveConstraints(int n, int[][] regionMap, BiConsumer<Long, List<Cell>> onIteration) {
+
         int[] perm = new int[n];
-        for (int i = 0; i < n; i++) {
-            perm[i] = i;
+        boolean[] usedCol = new boolean[n];
+
+        for (int r = 0; r < n; r++) {
+            perm[r] = r;
+            usedCol[r] = true;
         }
 
         while (true) {
             if (cancelled) {
                 return false;
             }
+
             iterationsChecked++;
 
             List<Cell> candidate = new ArrayList<>(n);
@@ -123,42 +128,38 @@ public class Solver {
                 onIteration.accept(iterationsChecked, candidate);
             }
 
-            if (!nextCandidate(perm)) {
-                break;
+            // manual perms itteration
+            int row = n - 1;
+            while (row >= 0) {
+                usedCol[perm[row]] = false;
+                int next = perm[row] + 1;
+                while (next < n && usedCol[next]) {
+                    next++;
+                }
+
+                if (next < n) {
+                    perm[row] = next;
+                    usedCol[next] = true;
+
+                    for (int r = row + 1; r < n; r++) {
+                        int c = 0;
+                        while (c < n && usedCol[c]) {
+                            c++;
+                        }
+                        perm[r] = c;
+                        usedCol[c] = true;
+                    }
+
+                    break;
+                } else {
+                    row--;
+                }
+            }
+
+            if (row < 0) {
+                return false;
             }
         }
-
-        return false;
-    }
-
-    private boolean nextCandidate(int[] perm) {
-        int i = perm.length - 2;
-        while (i >= 0 && perm[i] >= perm[i + 1]) {
-            i--;
-        }
-        if (i < 0) {
-            return false;
-        }
-
-        int j = perm.length - 1;
-        while (perm[j] <= perm[i]) {
-            j--;
-        }
-
-        int tmp = perm[i];
-        perm[i] = perm[j];
-        perm[j] = tmp;
-
-        int l = i + 1, r = perm.length - 1;
-        while (l < r) {
-            tmp = perm[l];
-            perm[l] = perm[r];
-            perm[r] = tmp;
-            l++;
-            r--;
-        }
-
-        return true;
     }
 
     private boolean queenCheck(List<Cell> queens, int n, int[][] regionMap) {

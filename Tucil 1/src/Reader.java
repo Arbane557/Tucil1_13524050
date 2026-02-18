@@ -1,4 +1,3 @@
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayDeque;
@@ -26,48 +25,51 @@ public class Reader {
         }
 
         if (lines.isEmpty()) {
-            return null;
+            throw new IllegalArgumentException("File is empty");
         }
 
         int n = lines.size();
         int cols = lines.get(0).length();
         if (cols == 0) {
-            return null;
+            throw new IllegalArgumentException("First row is empty");
         }
 
-        for (String s : lines) {
-            if (s.length() != cols) {
-                return null;
+        for (int i = 0; i < lines.size(); i++) {
+            if (lines.get(i).length() != cols) {
+                throw new IllegalArgumentException("Unexpected row length");
             }
         }
         if (n != cols) {
-            return null;
+            throw new IllegalArgumentException("Config is not square");
         }
 
+        // saves region each cell
         char[][] grid = new char[n][n];
-
         Set<Character> symbolsSet = new HashSet<>();
+
         for (int r = 0; r < n; r++) {
             String line = lines.get(r);
             for (int c = 0; c < n; c++) {
                 char ch = line.charAt(c);
                 if (ch < 'A' || ch > 'Z') {
-                    return null;
+                    throw new IllegalArgumentException("Invalid char in config");
                 }
                 grid[r][c] = ch;
                 symbolsSet.add(ch);
                 if (symbolsSet.size() > 26) {
-                    return null;
+                    throw new IllegalArgumentException("Too many regions");
                 }
             }
         }
 
         if (symbolsSet.size() != n) {
-            return null;
+            throw new IllegalArgumentException("Region count does not match n");
         }
 
         List<Character> symbols = new ArrayList<>(n);
         Map<Character, Integer> idxOf = new HashMap<>();
+
+        // sort char and then turn em into int indexes
         for (char ch : symbolsSet) {
             symbols.add(ch);
         }
@@ -90,21 +92,23 @@ public class Reader {
             }
         }
 
-        if (!allRegionsContiguous(grid, symbols, n)) {
-            return null;
+        String nonContig = findNonContiguous(grid, symbols, n);
+        if (nonContig != null) {
+            throw new IllegalArgumentException("Region not contiguous");
         }
 
         return new Config(n, grid, symbols, regions, regionMap);
     }
 
-    private boolean allRegionsContiguous(char[][] grid, List<Character> symbols, int n) {
-        for (char sym : symbols) {
+    private String findNonContiguous(char[][] grid, List<Character> symbols, int n) {
+        for (char s : symbols) {
             boolean[][] vis = new boolean[n][n];
 
+            // immidiete check on cells with symbol
             int sr = -1, sc = -1, total = 0;
             for (int r = 0; r < n; r++) {
                 for (int c = 0; c < n; c++) {
-                    if (grid[r][c] == sym) {
+                    if (grid[r][c] == s) {
                         total++;
                         if (sr == -1) {
                             sr = r;
@@ -114,14 +118,14 @@ public class Reader {
                 }
             }
             if (total == 0) {
-                return false;
+                return String.valueOf(s);
             }
 
+            // BFS
             int reached = 0;
             Deque<Cell> dq = new ArrayDeque<>();
             dq.add(new Cell(sr, sc));
             vis[sr][sc] = true;
-
             int[] dr = {-1, 1, 0, 0};
             int[] dc = {0, 0, -1, 1};
 
@@ -138,7 +142,7 @@ public class Reader {
                     if (vis[rr][cc]) {
                         continue;
                     }
-                    if (grid[rr][cc] != sym) {
+                    if (grid[rr][cc] != s) {
                         continue;
                     }
                     vis[rr][cc] = true;
@@ -147,9 +151,9 @@ public class Reader {
             }
 
             if (reached != total) {
-                return false;
+                return String.valueOf(s);
             }
         }
-        return true;
+        return null;
     }
 }
