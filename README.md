@@ -10,8 +10,8 @@ Aplikasi menyediakan GUI berbasis JavaFX dengan tampilan papan interaktif, dua m
 | Fitur | Keterangan |
 |---|---|
 | **Load** | Memuat konfigurasi papan dari file `.txt` |
-| **Solve — Pure** | Brute force murni kombinasi) |
-| **Solve — Constraints** | Brute force dengan preset constraint row dan col menggunakan permutasi |
+| **Solve — Pure** | Brute force murni ($\binom{n^2}{n}$ kombinasi) |
+| **Solve — Constraints** | Brute force dengan pruning (satu queen per baris, kolom, diagonal, dan region) |
 | **Save PNG** | Menyimpan screenshot papan solusi ke file gambar |
 | **Save TXT** | Menyimpan solusi ke file teks |
 | **Cancel** | Klik tombol `:)` untuk membatalkan pencarian |
@@ -57,6 +57,26 @@ run.bat
 mvn compile javafx:run
 ```
 
+### Menjalankan via JAR
+
+Build JAR terlebih dahulu:
+
+```bash
+mvn package -q
+```
+
+Lalu jalankan:
+
+**Windows:**
+```bat
+java --module-path lib --add-modules javafx.controls,javafx.swing -jar bin\queensweeper.jar
+```
+
+**Linux / WSL:**
+```bash
+java --module-path lib --add-modules javafx.controls,javafx.swing -jar bin/queensweeper.jar
+```
+
 ## Format File Konfigurasi
 
 File konfigurasi berupa grid $n \times n$ huruf kapital (`A`–`Z`), di mana setiap huruf merepresentasikan satu region.  
@@ -81,7 +101,6 @@ Menghasilkan semua kombinasi $\binom{n^2}{n}$ penempatan queen, lalu mengecek se
 Untuk setiap region, menempatkan tepat satu queen di salah satu sel region tersebut, lalu memvalidasi constraint secara inkremental. Pencarian di-prune saat terjadi konflik sehingga jauh lebih cepat.
 
 ## Author
-![Uploading image.png…]()
 
 - **Nama**: Raysha Erviandika Putra
 - **NIM**: 13524050
