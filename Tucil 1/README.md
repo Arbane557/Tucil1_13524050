@@ -57,6 +57,26 @@ run.bat
 mvn compile javafx:run
 ```
 
+### Menjalankan via JAR
+
+Build JAR terlebih dahulu:
+
+```bash
+mvn package -q
+```
+
+Lalu jalankan:
+
+**Windows:**
+```bat
+java --module-path lib --add-modules javafx.controls,javafx.swing -jar bin\queensweeper.jar
+```
+
+**Linux / WSL:**
+```bash
+java --module-path lib --add-modules javafx.controls,javafx.swing -jar bin/queensweeper.jar
+```
+
 ## Format File Konfigurasi
 
 File konfigurasi berupa grid $n \times n$ huruf kapital (`A`–`Z`), di mana setiap huruf merepresentasikan satu region.  
