@@ -10,8 +10,8 @@ Aplikasi menyediakan GUI berbasis JavaFX dengan tampilan papan interaktif, dua m
 | Fitur | Keterangan |
 |---|---|
 | **Load** | Memuat konfigurasi papan dari file `.txt` |
-| **Solve — Pure** | Brute force murni ($\binom{n^2}{n}$ kombinasi) |
-| **Solve — Constraints** | Brute force dengan pruning (satu queen per baris, kolom, diagonal, dan region) |
+| **Solve — Pure** | Brute force murni kombinasi) |
+| **Solve — Constraints** | Brute force dengan preset constraint row dan col menggunakan permutasi |
 | **Save PNG** | Menyimpan screenshot papan solusi ke file gambar |
 | **Save TXT** | Menyimpan solusi ke file teks |
 | **Cancel** | Klik tombol `:)` untuk membatalkan pencarian |
